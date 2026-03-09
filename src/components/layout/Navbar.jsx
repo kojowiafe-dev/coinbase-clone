@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useLivePrices } from '../../context/LivePricesContext';
 import { useAuth } from '../../context/AuthContext';
 import navigationUpsell from '../../assets/navigation-upsell.png';
@@ -345,6 +345,26 @@ function Navbar() {
   const [showLangDropdown, setShowLangDropdown] = useState(false);
   const [langSearch, setLangSearch] = useState('');
   const [selectedLang, setSelectedLang] = useState('en-global');
+  const [showSearch, setShowSearch] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchTab, setSearchTab] = useState('Top');
+  const searchPanelRef = useRef(null);
+
+  useEffect(() => {
+    if (!showSearch) return;
+    const handleKey = (e) => { if (e.key === 'Escape') setShowSearch(false); };
+    const handleClick = (e) => {
+      if (searchPanelRef.current && !searchPanelRef.current.contains(e.target)) {
+        setShowSearch(false);
+      }
+    };
+    document.addEventListener('keydown', handleKey);
+    document.addEventListener('mousedown', handleClick);
+    return () => {
+      document.removeEventListener('keydown', handleKey);
+      document.removeEventListener('mousedown', handleClick);
+    };
+  }, [showSearch]);
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
@@ -375,6 +395,39 @@ function Navbar() {
     l.region.toLowerCase().includes(langSearch.toLowerCase())
   );
 
+  const SEARCH_TABS = ['Top', 'Crypto', 'Stocks', 'Predictions', 'Perpetuals', 'Futures'];
+
+  const SEARCH_DATA = {
+    crypto: [
+      { icon: '₿', iconBg: '#F7931A', name: 'Bitcoin', rank: '#1', ticker: 'BTC', vol: 'GHS 49.6B vol', mcap: 'GHS 1.4T mcap', price: 'GHS 68,556.65', change: '↗ 3.15%', changeColor: '#16A34A' },
+      { icon: 'Ξ', iconBg: '#627EEA', name: 'Ethereum', rank: '#2', ticker: 'ETH', vol: 'GHS 23.9B vol', mcap: 'GHS 241.6B mcap', price: 'GHS 1,999.21', change: '↗ 2.55%', changeColor: '#16A34A' },
+      { icon: '₮', iconBg: '#26A17B', name: 'Tether', rank: '#3', ticker: 'USDT', vol: 'GHS 91.7B vol', mcap: 'GHS 183.9B mcap', price: 'GHS 1.00', change: '↗ 0.00%', changeColor: '#16A34A' },
+    ],
+    stocks: [
+      { icon: 'N', iconBg: '#76B900', name: 'NVIDIA', rank: '', ticker: 'NVDA', vol: 'GHS 179.1M vol', mcap: 'GHS 4.4T mcap', price: 'GHS 181.42', change: '↗ 3.67%', changeColor: '#16A34A' },
+      { icon: '', iconBg: '#A2AAAD', name: 'Apple', rank: '', ticker: 'AAPL', vol: 'GHS 38.3M vol', mcap: 'GHS 3.8T mcap', price: 'GHS 259.00', change: '↗ 0.88%', changeColor: '#16A34A' },
+      { icon: 'G', iconBg: '#4285F4', name: 'Alphabet Inc. Class C', rank: '', ticker: 'GOOG', vol: 'GHS 19.8M vol', mcap: 'GHS 3.7T mcap', price: 'GHS 304.61', change: '↗ 2.71%', changeColor: '#16A34A' },
+    ],
+    predictions: [
+      { icon: '⚡', iconBg: '#1652F0', name: 'BTC above $70K Dec', rank: '', ticker: 'PRED', vol: 'GHS 2.1M vol', mcap: '', price: 'GHS 0.72', change: '↗ 5.20%', changeColor: '#16A34A' },
+    ],
+  };
+
+  const getSearchResults = () => {
+    const q = searchQuery.toLowerCase();
+    const filterItems = (items) => items.filter(i => i.name.toLowerCase().includes(q) || i.ticker.toLowerCase().includes(q));
+    switch (searchTab) {
+      case 'Crypto': return { crypto: filterItems(SEARCH_DATA.crypto) };
+      case 'Stocks': return { stocks: filterItems(SEARCH_DATA.stocks) };
+      case 'Predictions': return { predictions: filterItems(SEARCH_DATA.predictions) };
+      default: return {
+        crypto: filterItems(SEARCH_DATA.crypto),
+        stocks: filterItems(SEARCH_DATA.stocks),
+        predictions: filterItems(SEARCH_DATA.predictions),
+      };
+    }
+  };
+
   const NAV_ITEMS = [
     { key: 'cryptocurrencies', label: 'Cryptocurrencies', path: '/explore', direct: true },
     { key: 'individuals',      label: 'Individuals' },
@@ -385,6 +438,7 @@ function Navbar() {
   ];
 
   return (
+    <>
     <nav style={{ background: '#fff', position: 'sticky', top: 0, zIndex: 100, boxShadow: '0 1px 0 #E5E7EB' }}>
       <style>{`
         /* Base styles for the link */
@@ -476,7 +530,9 @@ function Navbar() {
 
         {/* Right side */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }} className="hidden-mobile">
-          <button style={{ padding: '8px', background: 'none', border: 'none', cursor: 'pointer', color: '#6B7280', borderRadius: '8px' }}
+          <button
+            onClick={() => { setShowSearch(true); setSearchQuery(''); setSearchTab('Top'); }}
+            style={{ padding: '8px', background: 'none', border: 'none', cursor: 'pointer', color: '#6B7280', borderRadius: '8px' }}
             onMouseEnter={e => { e.currentTarget.style.background = '#F3F4F6'; e.currentTarget.style.color = '#111827'; }}
             onMouseLeave={e => { e.currentTarget.style.background = 'none'; e.currentTarget.style.color = '#6B7280'; }}
           >
@@ -671,6 +727,169 @@ function Navbar() {
         </div>
       )}
     </nav>
+
+    {/* Search overlay */}
+    {showSearch && (
+      <>
+        {/* Dark backdrop */}
+        <div
+          onClick={() => setShowSearch(false)}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.5)',
+            zIndex: 998,
+          }}
+        />
+        {/* Search bar + results */}
+        <div ref={searchPanelRef} style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          zIndex: 999,
+        }}>
+          {/* Search input bar */}
+          <div style={{
+            background: '#fff',
+            padding: '12px 24px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px',
+            borderBottom: '1px solid #E5E7EB',
+          }}>
+            <div style={{ flex: 1, maxWidth: '700px', marginLeft: 'auto', marginRight: 'auto', position: 'relative' }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1652F0" strokeWidth="2" strokeLinecap="round" style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)' }}><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+              <input
+                autoFocus
+                type="text"
+                placeholder="Search"
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '12px 16px 12px 44px',
+                  fontSize: '1rem',
+                  border: '2px solid #1652F0',
+                  borderRadius: '99px',
+                  outline: 'none',
+                  background: '#fff',
+                  boxSizing: 'border-box',
+                }}
+              />
+            </div>
+          </div>
+
+          {/* Results panel */}
+          <div style={{
+            maxWidth: '700px',
+            margin: '0 auto',
+            background: '#fff',
+            borderRadius: '0 0 16px 16px',
+            boxShadow: '0 12px 40px rgba(0,0,0,0.15)',
+            maxHeight: 'calc(100vh - 80px)',
+            overflowY: 'auto',
+          }}>
+            {/* Tabs */}
+            <div style={{ display: 'flex', gap: '6px', padding: '12px 16px', borderBottom: '1px solid #F3F4F6', flexWrap: 'wrap' }}>
+              {SEARCH_TABS.map(tab => (
+                <button
+                  key={tab}
+                  onClick={() => setSearchTab(tab)}
+                  style={{
+                    padding: '6px 14px',
+                    fontSize: '0.8125rem',
+                    fontWeight: '600',
+                    borderRadius: '99px',
+                    border: searchTab === tab ? '2px solid #111827' : '1px solid #E5E7EB',
+                    background: searchTab === tab ? '#111827' : '#fff',
+                    color: searchTab === tab ? '#fff' : '#374151',
+                    cursor: 'pointer',
+                  }}
+                  onMouseEnter={e => { if (searchTab !== tab) e.currentTarget.style.background = '#F9FAFB'; }}
+                  onMouseLeave={e => { if (searchTab !== tab) e.currentTarget.style.background = '#fff'; }}
+                >
+                  {tab}
+                </button>
+              ))}
+            </div>
+
+            {/* Results list */}
+            <div style={{ padding: '4px 0 12px' }}>
+              {(() => {
+                const results = getSearchResults();
+                const renderSection = (title, items) => {
+                  if (!items || items.length === 0) return null;
+                  return (
+                    <div key={title}>
+                      <p style={{ margin: '0', padding: '12px 20px 6px', fontSize: '0.6875rem', fontWeight: '700', color: '#6B7280', letterSpacing: '0.05em', textTransform: 'uppercase' }}>{title}</p>
+                      {items.map((item, idx) => (
+                        <div
+                          key={idx}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            padding: '10px 20px',
+                            gap: '12px',
+                            cursor: 'pointer',
+                          }}
+                          onMouseEnter={e => { e.currentTarget.style.background = '#F9FAFB'; }}
+                          onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
+                          onClick={() => setShowSearch(false)}
+                        >
+                          {/* Icon */}
+                          <div style={{
+                            width: 36,
+                            height: 36,
+                            borderRadius: '50%',
+                            background: item.iconBg,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            color: '#fff',
+                            fontSize: '1rem',
+                            fontWeight: '700',
+                            flexShrink: 0,
+                          }}>
+                            {item.icon}
+                          </div>
+                          {/* Name + ticker */}
+                          <div style={{ minWidth: 0, flexShrink: 0 }}>
+                            <p style={{ margin: 0, fontSize: '0.875rem', fontWeight: '600', color: '#111827', whiteSpace: 'nowrap' }}>
+                              {item.name}
+                              {item.rank && <span style={{ marginLeft: '6px', fontSize: '0.75rem', color: '#9CA3AF', fontWeight: '500' }}>{item.rank}</span>}
+                            </p>
+                            <p style={{ margin: 0, fontSize: '0.75rem', color: '#9CA3AF' }}>{item.ticker}</p>
+                          </div>
+                          {/* Vol + mcap */}
+                          <div style={{ flex: 1, textAlign: 'right', minWidth: 0 }}>
+                            <p style={{ margin: 0, fontSize: '0.75rem', color: '#6B7280', whiteSpace: 'nowrap' }}>{item.vol}</p>
+                            {item.mcap && <p style={{ margin: 0, fontSize: '0.75rem', color: '#6B7280', whiteSpace: 'nowrap' }}>{item.mcap}</p>}
+                          </div>
+                          {/* Price + change */}
+                          <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                            <p style={{ margin: 0, fontSize: '0.875rem', fontWeight: '600', color: '#111827', whiteSpace: 'nowrap' }}>{item.price}</p>
+                            <p style={{ margin: 0, fontSize: '0.75rem', color: item.changeColor, fontWeight: '500', whiteSpace: 'nowrap' }}>{item.change}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                };
+                return (
+                  <>
+                    {renderSection('Crypto', results.crypto)}
+                    {renderSection('Stocks', results.stocks)}
+                    {renderSection('Predictions', results.predictions)}
+                  </>
+                );
+              })()}
+            </div>
+          </div>
+        </div>
+      </>
+    )}
+    </>
   );
 }
 
