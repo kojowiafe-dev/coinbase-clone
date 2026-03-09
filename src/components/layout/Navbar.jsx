@@ -342,6 +342,9 @@ function Navbar() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [activeDropdown, setActiveDropdown] = useState(null);
   const [mobileExpanded, setMobileExpanded] = useState(null);
+  const [showLangDropdown, setShowLangDropdown] = useState(false);
+  const [langSearch, setLangSearch] = useState('');
+  const [selectedLang, setSelectedLang] = useState('en-global');
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
@@ -353,6 +356,24 @@ function Navbar() {
     navigate('/');
     setIsMobileMenuOpen(false);
   };
+
+  const LANGUAGES = [
+    { id: 'en-global', label: 'English', region: 'Global' },
+    { id: 'es-us', label: 'Español', region: 'United States' },
+    { id: 'en-us', label: 'English', region: 'United States' },
+    { id: 'de', label: 'Deutsch', region: '' },
+    { id: 'fr', label: 'Français', region: '' },
+    { id: 'pt-br', label: 'Português', region: 'Brasil' },
+    { id: 'ja', label: '日本語', region: '' },
+    { id: 'ko', label: '한국어', region: '' },
+    { id: 'tr', label: 'Türkçe', region: '' },
+    { id: 'it', label: 'Italiano', region: '' },
+  ];
+
+  const filteredLangs = LANGUAGES.filter(l =>
+    l.label.toLowerCase().includes(langSearch.toLowerCase()) ||
+    l.region.toLowerCase().includes(langSearch.toLowerCase())
+  );
 
   const NAV_ITEMS = [
     { key: 'cryptocurrencies', label: 'Cryptocurrencies', path: '/explore', direct: true },
@@ -461,12 +482,88 @@ function Navbar() {
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
           </button>
-          <button style={{ padding: '8px', background: 'none', border: 'none', cursor: 'pointer', color: '#6B7280', borderRadius: '8px' }}
-            onMouseEnter={e => { e.currentTarget.style.background = '#F3F4F6'; e.currentTarget.style.color = '#111827'; }}
-            onMouseLeave={e => { e.currentTarget.style.background = 'none'; e.currentTarget.style.color = '#6B7280'; }}
+          <div
+            style={{ position: 'relative' }}
+            onMouseEnter={() => setShowLangDropdown(true)}
+            onMouseLeave={() => { setShowLangDropdown(false); setLangSearch(''); }}
           >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
-          </button>
+            <button style={{ padding: '8px', background: showLangDropdown ? '#F3F4F6' : 'none', border: 'none', cursor: 'pointer', color: showLangDropdown ? '#111827' : '#6B7280', borderRadius: '8px' }}
+              onMouseEnter={e => { e.currentTarget.style.background = '#F3F4F6'; e.currentTarget.style.color = '#111827'; }}
+              onMouseLeave={e => { if (!showLangDropdown) { e.currentTarget.style.background = 'none'; e.currentTarget.style.color = '#6B7280'; } }}
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+            </button>
+            {showLangDropdown && (
+              <div style={{
+                position: 'absolute',
+                top: '100%',
+                right: 0,
+                marginTop: '8px',
+                width: '240px',
+                background: '#fff',
+                border: '1px solid #E5E7EB',
+                borderRadius: '12px',
+                boxShadow: '0 12px 40px rgba(0,0,0,0.1)',
+                zIndex: 300,
+                overflow: 'hidden',
+              }}>
+                <div style={{ padding: '16px 16px 8px' }}>
+                  <p style={{ margin: '0 0 12px', fontSize: '0.875rem', fontWeight: '700', color: '#111827' }}>Language and region</p>
+                  <div style={{ position: 'relative' }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" strokeWidth="2" strokeLinecap="round" style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)' }}><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                    <input
+                      type="text"
+                      placeholder="Search"
+                      value={langSearch}
+                      onChange={e => setLangSearch(e.target.value)}
+                      style={{
+                        width: '100%',
+                        padding: '8px 12px 8px 34px',
+                        fontSize: '0.8125rem',
+                        border: '1px solid #E5E7EB',
+                        borderRadius: '8px',
+                        outline: 'none',
+                        background: '#F9FAFB',
+                        boxSizing: 'border-box',
+                      }}
+                      onFocus={e => { e.target.style.borderColor = '#1652F0'; }}
+                      onBlur={e => { e.target.style.borderColor = '#E5E7EB'; }}
+                    />
+                  </div>
+                </div>
+                <div style={{ maxHeight: '240px', overflowY: 'auto', padding: '4px 8px 8px' }}>
+                  {filteredLangs.map(lang => (
+                    <button
+                      key={lang.id}
+                      onClick={() => { setSelectedLang(lang.id); setShowLangDropdown(false); setLangSearch(''); }}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        width: '100%',
+                        padding: '10px 8px',
+                        background: 'none',
+                        border: 'none',
+                        cursor: 'pointer',
+                        borderRadius: '8px',
+                        textAlign: 'left',
+                      }}
+                      onMouseEnter={e => { e.currentTarget.style.background = '#F9FAFB'; }}
+                      onMouseLeave={e => { e.currentTarget.style.background = 'none'; }}
+                    >
+                      <div>
+                        <p style={{ margin: 0, fontSize: '0.875rem', fontWeight: '600', color: '#111827' }}>{lang.label}</p>
+                        {lang.region && <p style={{ margin: '1px 0 0', fontSize: '0.75rem', color: '#6B7280' }}>{lang.region}</p>}
+                      </div>
+                      {selectedLang === lang.id && (
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#16A34A" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
           {user ? (
             <>
               <Link
